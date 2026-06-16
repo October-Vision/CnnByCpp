@@ -1,17 +1,20 @@
-cmake_minimum_required(VERSION 3.10)
-#项目名称
-project(my_cnn)
+cmake_minimum_required(VERSION 3.18)
 
+project(my_cnn LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# 开启最高级别的优化选项，这对于跑神经网络非常重要
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall")
+find_package(CUDAToolkit REQUIRED)
 
-#头文件.hpp目录
+#头文件
 include_directories(include)
 
-#.cpp 源文件
-file(GLOB SOURCES "src/*.cpp")
+#.cpp和.cu源文件
+file(GLOB SOURCES "src/*.cpp" "src/*.cu")
 
+#生成可执行文件
 add_executable(my_cnn ${SOURCES})
+
+target_link_libraries(my_cnn PRIVATE CUDA::cublas)
+
+target_compile_options(my_cnn PRIVATE -O3 -g -Wall)

@@ -47,7 +47,7 @@ class SoftmaxWithLoss{
     Tensor backward(float dout=1.0f);
 
 };
-
+//卷积层
 class Convolution{
     private:
     public:
@@ -67,4 +67,23 @@ class Convolution{
     Convolution(const Tensor& weight,const Tensor& bias,int stride=1,int pad=0);
     Tensor forward(const Tensor& input);
     Tensor backward(const Tensor& dout);
+};
+
+//池化层
+class Pooling{
+    private:
+    public:
+    int pool_h;
+    int pool_w;
+    int stride;
+    int pad;
+
+
+    Tensor x;
+    std::vector<int> argmax;//记录每次池化窗口最大索引，反向传播要用
+
+    Pooling(int pool_h, int pool_w, int stride = 1, int pad = 0);
+    Tensor forward(const Tensor& input);
+    Tensor backward(const Tensor& dout);
+    
 };

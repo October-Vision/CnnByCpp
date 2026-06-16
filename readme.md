@@ -4,6 +4,8 @@
 2           SGD更新参数与计算梯度不一致
 3           reshape新形状的元素总数与原张量不一致
 4           张量不是4D
+5           保存模型失败
+6           加载模型失败
 ###  trouble
 ## load加载问题
 加载失败，各个参数明显错误；
@@ -15,6 +17,12 @@
 维度不匹配问题，代码中有个地方写成了1维度
 找半天没找到，最后还是AI发现的
 
+## cuda 维度错误
+在cublasSgemm函数中，只要有一个指针地址是空的，或者传入的m, n, k维度计算不对，就会直接发生非法内存访问
+![alt text](image/cuda_trouble.png)
+
+## 预测结果：
+![alt text](image/pre_result.png)
 
 ### debug记录
 layer Relu和affine测试：
@@ -28,6 +36,10 @@ softmaxwithloss:
 
 维度转换：
 ![alt text](image/im2col.png)
+conv 训练结果：
+![alt text](image/result_cov.png)
+
+加入池化层：
 
 # debug存档：
 

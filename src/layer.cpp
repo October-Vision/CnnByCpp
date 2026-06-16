@@ -36,14 +36,17 @@ Affine::Affine(const Tensor& weight, const Tensor& bias){
 }
 Tensor Affine::forward(const Tensor& input){
     x=input;  //缓存，在反向传播时使用
-    return x.dot(W)+b;
+    //return x.dot(W)+b;
+    return x.dot_cuda(W)+b;
 }
 
 Tensor Affine::backward(const Tensor& dout){
     //计算上层梯度  dx=dout  * w转置
-    Tensor dx=dout.dot(W.transpose());
+    //Tensor dx=dout.dot(W.transpose());
+    Tensor dx=dout.dot_cuda(W.transpose());
     //当前成权重梯度dw=x转置*dout
-    dW=x.transpose().dot(dout);
+    //dW=x.transpose().dot(dout);
+    dW=x.transpose().dot_cuda(dout);
 
     //BIAS 梯度 db=sum(dout,axis=0)
     db=dout.sum_axis0();
@@ -130,7 +133,8 @@ Tensor Convolution::forward(const Tensor& input){
     Tensor w_reshaped = W.reshape({FN, C*FH*FW});
     col_W = w_reshaped.transpose();
     //卷积To* +b
-    Tensor out = col.dot(col_W) + b;
+    //Tensor out = col.dot(col_W) + b;
+    Tensor out = col.dot_cuda(col_W) + b;
     //out(N*out_h*out_w,FN)Bianhui N, FN, out_h, out_w
     Tensor out_4d = out.reshape({N, out_h, out_w, FN});
     return out_4d.transpose_NHWC_to_NCHW();
@@ -150,12 +154,87 @@ Tensor Convolution::backward(const Tensor& dout){
     dout_col=dout_trans.reshape({row_size,FN});
     //计算d偏置and dw
     db=dout_col.sum_axis0();
-    Tensor dW_col=col.transpose().dot(dout_col);
+    // Tensor dW_col=col.transpose().dot(dout_col);
+    Tensor dW_col=col.transpose().dot_cuda(dout_col);
     dW=dW_col.transpose().reshape(W.shape);//FN C FH FW
     //findout tidu
-    Tensor dcol=dout_col.dot(col_W.transpose());
+    // Tensor dcol=dout_col.dot(col_W.transpose());
+    Tensor dcol=dout_col.dot_cuda(col_W.transpose());
     Tensor dx=col2im(dcol,x.shape,FH,FW,stride,pad);
 
     return dx;
 
 }   
+
+
+//池化层实现
+Pooling::Pooling(int pool_h,int pool_w,int s,int p)
+    : pool_h(pool_h), pool_w(pool_w), stride(s), pad(p) {}
+
+Tensor Pooling::forward(const Tensor& input){
+    x=input;
+    int N=x.shape[0];
+    int C=x.shape[1];
+    int H=x.shape[2];
+    int W=x.shape[3];
+
+    //计算池化后的输出尺寸
+    int out_h=(H+2*pad - pool_h)/stride+1;
+    int out_w=(W+2*pad - pool_w)/stride+1;
+
+    //展开
+    Tensor col=im2col(x,pool_h,pool_w,stride,pad);
+
+    //这里给了个很好的方法：使用内存排序特性，按通道切分窗口来找最大值；
+    int num_windows=N*out_h*out_w*C;//总的窗口数量
+    int window_size=pool_h*pool_w;//每个窗口有多少元素
+
+    Tensor out_flat({num_windows},0.0f);
+    argmax.resize(num_windows);
+
+    //遍历窗口寻找max和argmax
+    for (int i =0; i<num_windows; ++i) {
+        float max_val=-1e20f; // 极小值
+        int max_idx =-1;
+        for (int j = 0; j < window_size; ++j) {
+            float val = col.data[i *window_size + j];
+            if (val > max_val) {
+                max_val = val;
+                max_idx = j;
+            }
+        }
+        out_flat.data[i] = max_val; // 保存最大值
+        argmax[i] = max_idx;        // 保存最大值在窗口中的相对位置
+    }
+
+    //将1D变回4D特征
+    //N, out_h, out_w, C
+    Tensor out_4d=out_flat.reshape({N,out_h,out_w,C});
+    return out_4d.transpose_NHWC_to_NCHW();
+
+}
+
+Tensor Pooling::backward(const Tensor& dout){
+    //梯度 N,C,OH,OW置换为N,OH,OW,C匹配正向时候的平铺结构
+    Tensor dout_trans=dout.transpose_NCHW_to_NHWC();
+
+    int N=x.shape[0];
+    int C=x.shape[1];
+    int out_h=dout.shape[2];
+    int out_w=dout.shape[3];
+
+    int num_windows=N*out_h*out_w*C;//总的窗口数量
+    int window_size=pool_h*pool_w;//每个窗口有多少元素
+
+    //声明全0展开矩阵
+    Tensor dcol({N*out_h*out_w, C*window_size}, 0.0f);
+    //根据前向记录Argmax,把梯度放回原来位置 no 最大其余职位0
+    for (int i = 0; i <num_windows; ++i) {
+        int max_idx=argmax[i];
+        dcol.data[i*window_size + max_idx] = dout_trans.data[i];
+    }
+
+    //折叠回图像
+    Tensor dx=col2im(dcol,x.shape,pool_h,pool_w,stride,pad);
+    return dx;
+}

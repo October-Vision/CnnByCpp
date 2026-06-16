@@ -156,3 +156,19 @@ Tensor Tensor::transpose_NCHW_to_NHWC() const {
     }
     return res;
 }
+
+void Tensor::save(const std::string& filename) const {
+    std::ofstream out(filename, std::ios::binary);
+    assert(out.is_open() && "fall5保存失败");
+    //把底层的连续内存作为二进制块写入硬盘
+    out.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(float));
+    out.close();
+}
+
+void Tensor::load(const std::string& filename) {
+    std::ifstream in(filename, std::ios::binary);
+    assert(in.is_open() && "fall6读取失败");
+    //从硬盘直接把二进制块读入内存
+    in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
+    in.close();
+}
