@@ -1,0 +1,12 @@
+# 编译生成的文件夹
+build/
+
+# MNIST 数据集（不要把数据传上git！）
+data/
+
+# 如果你用了 vscode 等编辑器
+.vscode/
+.idea/
+
+# 备用的临时文件
+*.log
