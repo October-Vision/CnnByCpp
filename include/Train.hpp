@@ -3,10 +3,12 @@
 #include <iostream>
 #include <random>
 #include <iomanip>
+#include <fstream>
 
 #include "load.hpp"
 #include "metrics.hpp"
 #include "Model.hpp"
+#include "log.hpp"
 
 class Trainer {
 private:

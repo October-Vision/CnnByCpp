@@ -6,15 +6,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 find_package(CUDAToolkit REQUIRED)
 
-#头文件
-include_directories(include)
 
-#.cpp和.cu源文件
+find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui)
+
+include_directories(include ${OpenCV_INCLUDE_DIRS})
+
 file(GLOB SOURCES "src/*.cpp" "src/*.cu")
 
-#生成可执行文件
 add_executable(my_cnn ${SOURCES})
 
-target_link_libraries(my_cnn PRIVATE CUDA::cublas)
+# 极其清爽的链接，不需要再手写 Qt 依赖
+target_link_libraries(my_cnn PRIVATE 
+    CUDA::cublas 
+    opencv_core
+    opencv_imgproc
+    opencv_highgui
+)
 
 target_compile_options(my_cnn PRIVATE -O3 -g -Wall)

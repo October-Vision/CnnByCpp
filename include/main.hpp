@@ -14,3 +14,4 @@
 #include "Train.hpp"
 #include "Model.hpp"
 #include "predict.hpp"
+#include "gui.hpp"

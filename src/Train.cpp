@@ -31,6 +31,7 @@ void Trainer::fit(SimpleConvNet& model,
     mt19937 gen(rd());
     uniform_int_distribution<> dis(0, train_size-1);
 
+    CSVLogger logger("../logs/training_log.csv", "Iteration,Loss,Train_Accuracy,MSE,Precision,Recall,F1_Score");
     for (int i=0; i<cfg.iters_num; ++i) {
         Tensor x_batch({cfg.batch_size, 1, 28, 28}); 
         Tensor t_batch({cfg.batch_size, cfg.output_size}); 
@@ -45,10 +46,25 @@ void Trainer::fit(SimpleConvNet& model,
         model.backward();
         model.update_weights(optimizer);
 
-        if (i%50 == 0) {
-            cout << "      Iteration: " << setw(4) << i 
-                 << " | Loss: " << fixed << setprecision(4) << loss << endl;
-        }
+        if (i%100 == 0) {
+            Tensor batch_pred = model.predict(x_batch);
+            float batch_acc     = Metrics::accuracy(batch_pred, t_batch);
+            float batch_mse     = Metrics::mse(batch_pred, t_batch);
+            float batch_f1score = Metrics::f1_score(batch_pred,t_batch);
+            float batch_pre     = Metrics::precision(batch_pred,t_batch);
+            float batch_recall  = Metrics::recall(batch_pred,t_batch);
+        
+            cout << "      [Iter " << setw(4) << i << "] "
+                 << "Loss: "  << fixed << setprecision(4) << loss << " | "
+                 << "Acc: "   << setprecision(2) << batch_acc * 100.0f << "% | "
+                 << "MSE: "   << setprecision(4) << batch_mse << " | "
+                 << "Pre: "   << setprecision(2) << batch_pre * 100.0f << "% | "
+                 << "Rec: "   << setprecision(2) << batch_recall * 100.0f << "% | "
+                 << "F1: "    << setprecision(4) << batch_f1score 
+                 << endl;
+        
+            logger.log_row(i, {loss, batch_acc, batch_mse, batch_pre, batch_recall, batch_f1score});
+            }
     }
 
 //test
@@ -63,6 +79,6 @@ void Trainer::fit(SimpleConvNet& model,
     Tensor test_pred=model.predict(x_test_batch);
     float acc=Metrics::accuracy(test_pred, t_test_batch);
     cout << "Acc:" << fixed << setprecision(2) << acc*100.0f<< endl;
-    model.save_weights();
+    model.save_weights("../model/");
 
 }
