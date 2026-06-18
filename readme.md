@@ -2,7 +2,7 @@
   <img src="./title.svg" alt="凭栏听曲" />
 </div>
 
-# 写在开头
+## 写在开头
     此仓库为基于c++实现的基于miniset数据集的CNN神经网络手写识别
 ## 实现功能
     ** 张量计算（Tensor engine）：支持多维数据的内存管理形状重塑，并实现了im2col和col2im卷积空间展开算法
@@ -82,8 +82,11 @@ make -j8
 ###  trouble
 ## load加载问题
 加载失败，各个参数明显错误；
+
 ![alt text](image/loadfall.png)
+
 大小端问题 详见load.cpp开头定义
+
 ![alt text](image/image.png)
 
 ## tensor
@@ -92,37 +95,45 @@ make -j8
 
 ## cuda 维度错误
 在cublasSgemm函数中，只要有一个指针地址是空的，或者传入的m, n, k维度计算不对，就会直接发生非法内存访问
+
 ![alt text](image/cuda_trouble.png)
 
 ## 预测结果：
+
 ![alt text](image/pre_result.png)
 
 ### debug记录
 layer Relu和affine测试：
+
 ![alt text](image/layer_result_debug.png)
 
 softmaxwithloss:
+
 ![alt text](image/softmax.png)
 
 两层MLP实现结果：
+
 ![alt text](image/result1.png)
 
 维度转换：
+
 ![alt text](image/im2col.png)
 conv 训练结果：
-![alt text](image/result_cov.png)
 
-加入池化层：
+![alt text](image/result_cov.png)
 
 # 结果：
 这次效果其实不好因为我只做测试只取了前10000张并且只跑了1000轮，其实取出来的部分都没有跑完：
+
 ![alt text](image/identify_result1.png)
 
 结果2：
 现有的模型精度还是差了点，训练日志看old_tring可以看到MSE异常，模型过拟合严重。优化方案:optimizer中加入L2正则化，增加一层CNN网络（现为单层CNN）
+
 ![alt text](image/result2.png)
 
 结果3：
+
 ![alt text](image/result_3.png)
 
 
