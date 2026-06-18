@@ -30,16 +30,36 @@ float Metrics::accuracy(const Tensor& predictions, const Tensor& labels) {
     }
     return (float)correct_count/batch_size;
 }
-//
-float Metrics::mse(const Tensor& predictions,const Tensor& labels){
-    int total_elements= predictions.shape[0] *predictions.shape[1];
+//mse
+float Metrics::mse(const Tensor& predictions, const Tensor& labels) {
+    int batch_size = predictions.shape[0];
+    int num_classes = predictions.shape[1];
     float sum_squared_error = 0.0f;
 
-    for (int i = 0; i < total_elements; ++i) {
-        float diff = predictions.data[i] - labels.data[i];
-        sum_squared_error += diff*diff;
+    for (int i = 0; i < batch_size; ++i) {
+        //找出当前样本最大打分，防止指数爆炸
+        float max_val = predictions.data[i * num_classes];
+        for (int j = 1; j < num_classes; ++j) {
+            if (predictions.data[i * num_classes + j] > max_val) {
+                max_val = predictions.data[i * num_classes + j];
+            }
+        }
+
+        //计算Softmax分母，指数项之和
+        float exp_sum = 0.0f;
+        for (int j = 0; j < num_classes; ++j) {
+            exp_sum += std::exp(predictions.data[i * num_classes + j] - max_val);
+        }
+
+        //概率与标签求平方差
+        for (int j = 0; j < num_classes; ++j) {
+            float prob = std::exp(predictions.data[i * num_classes + j] - max_val) / exp_sum;
+            float diff = prob - labels.data[i * num_classes + j];
+            sum_squared_error += diff * diff;
+        }
     }
-    return sum_squared_error/total_elements;
+    int total_elements = batch_size * num_classes;
+    return sum_squared_error / total_elements;
 }
 //TP FN FP
 static void get_confusion_stats(const Tensor& preds, const Tensor& labels, 

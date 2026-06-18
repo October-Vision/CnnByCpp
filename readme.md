@@ -2,6 +2,74 @@
   <img src="./title.svg" alt="凭栏听曲" />
 </div>
 
+# 写在开头
+    此仓库为基于c++实现的基于miniset数据集的CNN神经网络手写识别
+## 实现功能
+    ** 张量计算（Tensor engine）：支持多维数据的内存管理形状重塑，并实现了im2col和col2im卷积空间展开算法
+    ** CUDA加速：集成CUDA与cuBLAS将密集矩阵计算下放置GPU执行 ps有提升但感觉提升不大
+    ** 网络架构：现已实现卷积层（Convolution），最大池化层（Pooling）,全连接层（Affine），激活函数（Relu），交叉熵损失层（SoftwithLoss）
+    ** 双层CNN与L2正则化： 训练时发现存在严重过拟合问题，增加了双层特征提取架构(Conv->Pool->Conv->Pool->Affine->Affine),并在SGD优化器中加入L2正则化
+    ** 评估体系：MSE ACC F1-score Pre Recall，训练时会保存权重到log里面详见metrics.cpp
+    ** 手写识别：这部分比较简单不过多缀述，详见gui.cpp使用时打开main注释
+## 项目架构
+```text
+C_CNN_Project/
+├── include/                # 头文件目录：定义数据结构与接口
+│   ├── Cnn_utils.hpp       # 底层空间拉平算法 (im2col, col2im) 声明
+│   ├── gui.hpp             # 前端类声明
+│   ├── layer.hpp           # 各类神经网络层 (Conv, Pool, ReLU, Affine) 定义
+│   ├── load.hpp            # 数据集解析与预处理接口
+│   ├── log.hpp             # CSV日志记录声明
+│   ├── main.hpp            # 引用其他文件
+│   ├── metrics.hpp         # 多维度评估指标 (Acc, MSE, F1 等)
+│   ├── Model.hpp           # CNN 核心模型组装与权重管理
+│   ├── optimizer.hpp       # 优化器接口 (SGD with L2 Regularization)
+│   ├── predict.hpp         # 推理声明
+│   ├── tensor.hpp          # 多维张量 (Tensor) 数据结构定义
+│   └── Train.hpp           # 训练调度器声明
+│
+└── src/                    # 源文件目录：核心逻辑实现
+    ├── Cnn_utils.cpp       # 卷积底层数学运算实现
+    ├── gui.cpp             # OpenCV 窗口绘图与事件回调处理
+    ├── layer.cpp           # 前向推理与反向链式求导实现
+    ├── load.cpp            # MNIST 字节流解析、归一化、One-hot 编码
+    ├── log.cpp             # 文件流安全读写与 CSV 自动落盘
+    ├── main.cpp            # 程序主入口
+    ├── metrics.cpp         # 混淆矩阵及各项指标公式计算
+    ├── Model.cpp           # 双层网络搭建及参数更新
+    ├── Oldmain.cpp         # 旧版测试入口代码
+    ├── optimizer.cpp       # 梯度下降与 Weight Decay 惩罚项计算
+    ├── predict.cpp         # 模型加载与单张图像前向预测逻辑
+    ├── tensor.cpp          # CPU下的张量基础运算实现
+    ├── tensor_cuda.cu      # GPU异构张量运算 (CUDA/cuBLAS)
+    └── Train.cpp           # Batch划分、训练循环、验证与日志输出
+```
+
+## 训练结果大观：
+第一版，过拟合严重但是此时还没注意到MSE这么大
+![alt text](image/result/training_curves_HD.png)
+第二版，过拟合好多了，注意到MSE不对了，修改MSE计算逻辑
+![alt text](image/result/training_curves_HD2.png)
+ps:原来是predict输出的是最后一个全连接层的原始得分，没有经过softmax层归一化，修改
+第三版：好多了。。。。
+![alt text](image/result/training_curves_HD3.png)
+
+### 运行方式
+其实本没有什么依赖要装，但是由于后期引入了前端和GPU异构运算，因此还是得装一下opencv和cuda
+## 环境依赖
+* **C++ 17**
+* **Cmake >=3.18**
+* **CUDA Toolkit**就够了
+* **Opencv** arch这里还得多装一个QT6，在包管理模式下opencv和qt6是强绑定
+
+## 编译
+这里保留了makefile，不喜欢cmake可以使用makefile编译
+```bash
+mkdir build && cd build
+cmake ..
+make -j8
+```
+
 ### 错误自查：
 | 报错码 | 错误描述 (Trouble) |
 | :---: | :--- |
@@ -54,6 +122,9 @@ conv 训练结果：
 现有的模型精度还是差了点，训练日志看old_tring可以看到MSE异常，模型过拟合严重。优化方案:optimizer中加入L2正则化，增加一层CNN网络（现为单层CNN）
 ![alt text](image/result2.png)
 
+结果3：
+![alt text](image/result_3.png)
+
 
 
 # debug存档：
@@ -76,45 +147,44 @@ conv 训练结果：
     // //应该是2*2
     // Y.print_shape();
 
+    //     // 假装 (BatchSize=2, Features=2)
+    //     Tensor X({2, 2});
+    //     X.data = { 1.0f, -0.5f, 
+    //               -2.0f,  3.0f};
 
-//     // 假装 (BatchSize=2, Features=2)
-//     Tensor X({2, 2});
-//     X.data = { 1.0f, -0.5f, 
-//               -2.0f,  3.0f};
+    //     // 权重和偏置 (输入节点2，输出节点3)
+    //     Tensor W({2, 3});
+    //     W.data = {0.1f, 0.2f, 0.3f, 
+    //               0.4f, 0.5f, 0.6f};
+    //     Tensor b({3});
+    //     b.data = {0.1f, 0.2f, 0.3f};
 
-//     // 权重和偏置 (输入节点2，输出节点3)
-//     Tensor W({2, 3});
-//     W.data = {0.1f, 0.2f, 0.3f, 
-//               0.4f, 0.5f, 0.6f};
-//     Tensor b({3});
-//     b.data = {0.1f, 0.2f, 0.3f};
+    //     //实例化层
+    //     Affine affine_layer(W, b);
+    //     Relu relu_layer;
 
-//     //实例化层
-//     Affine affine_layer(W, b);
-//     Relu relu_layer;
+    //     //
+    //     cout << "正向\n";
+    //     Tensor a1 = affine_layer.forward(X);
+    //     Tensor y = relu_layer.forward(a1);
+        
+    //     print_tensor_data("输出 Y ", y);
 
-//     //
-//     cout << "正向\n";
-//     Tensor a1 = affine_layer.forward(X);
-//     Tensor y = relu_layer.forward(a1);
-    
-//     print_tensor_data("输出 Y ", y);
+    //    //假设梯度
+    //     cout << "反向传播\n";
+    //     Tensor dout({2, 3});
+    //     dout.data = {1.0f, 1.0f, 1.0f,   // 样本1的梯度
+    //                  1.0f, 1.0f, 1.0f};  // 样本2的梯度
 
-//    //假设梯度
-//     cout << "反向传播\n";
-//     Tensor dout({2, 3});
-//     dout.data = {1.0f, 1.0f, 1.0f,   // 样本1的梯度
-//                  1.0f, 1.0f, 1.0f};  // 样本2的梯度
+    //     //先经过 ReLU，再经Affine
+    //     Tensor da1 = relu_layer.backward(dout);
+    //     Tensor dX = affine_layer.backward(da1);
 
-//     //先经过 ReLU，再经Affine
-//     Tensor da1 = relu_layer.backward(dout);
-//     Tensor dX = affine_layer.backward(da1);
-
-//     // 
-//     cout << "--- 梯度计算结果 ---\n";
-//     print_tensor_data("偏置梯度 db (应该反映出ReLU的阻断):", affine_layer.db);
-//     print_tensor_data("权重梯度 dW:", affine_layer.dW);
-//     print_tensor_data("传递给上一层的输入梯度 dX:", dX);
+    //     // 
+    //     cout << "--- 梯度计算结果 ---\n";
+    //     print_tensor_data("偏置梯度 db (应该反映出ReLU的阻断):", affine_layer.db);
+    //     print_tensor_data("权重梯度 dW:", affine_layer.dW);
+    //     print_tensor_data("传递给上一层的输入梯度 dX:", dX);
     
     // // 假设这是一个 3 分类问题
     // // 假设最后一层 Affine 输出了 2 个样本的得分 X
@@ -148,28 +218,28 @@ conv 训练结果：
 
 
 # 打印debug
-// void print_tensor_data(const string& name, const Tensor& t) {
-//     cout << name << " "; t.print_shape();
-//     for(int i=0; i<t.shape[0]; i++) {
-//         for(int j=0; j<(t.shape.size() > 1 ? t.shape[1] : 1); j++) {
-//             cout << t.data[i * (t.shape.size() > 1 ? t.shape[1] : 1) + j] << " ";
-//         }
-//         cout << endl;
-//     }
-//     cout << endl;
-// }
-// void print_tensor_data(const string& name, const Tensor& t) {
-//     cout << name << endl;
-//     for(int i=0; i<t.shape[0]; i++) {
-//         for(int j=0; j<(t.shape.size() > 1 ? t.shape[1] : 1); j++) {
-//             cout << fixed << setprecision(4) << t.data[i * (t.shape.size() > 1 ? t.shape[1] : 1) + j] << "  ";
-//         }
-//         cout << endl;
-//     }
-//     cout << endl;
-// }
+    // void print_tensor_data(const string& name, const Tensor& t) {
+    //     cout << name << " "; t.print_shape();
+    //     for(int i=0; i<t.shape[0]; i++) {
+    //         for(int j=0; j<(t.shape.size() > 1 ? t.shape[1] : 1); j++) {
+    //             cout << t.data[i * (t.shape.size() > 1 ? t.shape[1] : 1) + j] << " ";
+    //         }
+    //         cout << endl;
+    //     }
+    //     cout << endl;
+    // }
+    // void print_tensor_data(const string& name, const Tensor& t) {
+    //     cout << name << endl;
+    //     for(int i=0; i<t.shape[0]; i++) {
+    //         for(int j=0; j<(t.shape.size() > 1 ? t.shape[1] : 1); j++) {
+    //             cout << fixed << setprecision(4) << t.data[i * (t.shape.size() > 1 ? t.shape[1] : 1) + j] << "  ";
+    //         }
+    //         cout << endl;
+    //     }
+    //     cout << endl;
+    // }
 
-// void print_tensor_data(const string& name, const Tensor& t);
+    // void print_tensor_data(const string& name, const Tensor& t);
 
 
 

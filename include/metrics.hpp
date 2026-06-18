@@ -1,5 +1,7 @@
 #pragma once
+#include<cmath>
 #include "tensor.hpp"
+
 
 class Metrics{
     private:
