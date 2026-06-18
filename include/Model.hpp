@@ -22,11 +22,15 @@ class SimpleConvNet {
 public:
     // 权重与偏置张量
     Tensor W1, b1, W2, b2, W3, b3;
+    Tensor W_conv2,b_conv2;
 
     //使用指针存储网络层类调用会引发冲突
     Convolution* conv1;
+    Convolution* conv2;
     Relu* relu1;
+    Relu* relu_conv2;
     Pooling* pool1;
+    Pooling* pool2;
     Affine* affine1;
     Relu* relu2;
     Affine* affine2;

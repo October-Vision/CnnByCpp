@@ -1,45 +1,61 @@
-
 <svg width="600" height="180" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="liquid" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#a18cd1">
-          <animate attributeName="stop-color" values="#a18cd1;#fbc2eb;#a18cd1" dur="5s" repeatCount="indefinite" />
-        </stop>
-        <stop offset="100%" stop-color="#8fd3f4">
-          <animate attributeName="stop-color" values="#8fd3f4;#84fab0;#8fd3f4" dur="5s" repeatCount="indefinite" />
-        </stop>
-      </linearGradient>
+  <defs>
+    <linearGradient id="liquid-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff">
+        <animate attributeName="stop-color" values="#ffffff;#8fd3f4;#ffffff" dur="2.5s" repeatCount="indefinite" />
+      </stop>
+      <stop offset="100%" stop-color="#8fd3f4">
+        <animate attributeName="stop-color" values="#8fd3f4;#ffffff;#8fd3f4" dur="2.5s" repeatCount="indefinite" />
+      </stop>
+    </linearGradient>
 
-      <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
+    <filter id="pure-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4.5" result="blur" />
+    </filter>
+  </defs>
 
-    <style>
-      .glass-text {
+  <style>
+    /* 基础字体设置 */
+    .base-text {
+      font-family: "Songti SC", "STSong", "KaiTi", serif;
+      font-size: 76px;
+      font-weight: 900;
+      letter-spacing: 28px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
 
-        font-family: "Songti SC", "STSong", "KaiTi", serif;
-        font-size: 76px;
-        font-weight: 900;
-        
-        fill: rgba(255, 255, 255, 0.03); 
-        stroke: url(#liquid);
-        stroke-width: 1.5px;
+    /* 底层：发光弥散层（负责快速顺滑的呼吸感） */
+    .glow-layer {
+      fill: none;
+      stroke: url(#liquid-light);
+      filter: url(#pure-glow);
+      /* 动画提速到 2.5s，使用 ease-in-out 保证极其丝滑的呼吸 */
+      animation: fast-breath 2.5s ease-in-out infinite;
+    }
 
-        filter: url(#edge-glow);
-        letter-spacing: 28px;
-        
-        animation: breath 4s ease-in-out infinite;
-      }
+    /* 顶层：极其锐利的玻璃边缘层（绝对不加模糊，保证清晰度！） */
+    .sharp-layer {
+      fill: rgba(255, 255, 255, 0.06); /* 极其微弱的液态泛白填充 */
+      stroke: url(#liquid-light);
+      stroke-width: 1.2px;
+      /* 顶层只做轻微的透明度联动，维持骨架的冰冷锐利 */
+      animation: core-breath 2.5s ease-in-out infinite;
+    }
 
-      @keyframes breath {
-        0%, 100% { opacity: 0.6; stroke-width: 1px; }
-        50% { opacity: 1; stroke-width: 2.5px; filter: drop-shadow(0 0 15px rgba(143, 211, 244, 0.8)); }
-      }
-    </style>
+    /* 底层光晕的爆发动画 */
+    @keyframes fast-breath {
+      0%, 100% { opacity: 0.2; stroke-width: 2px; }
+      50% { opacity: 0.9; stroke-width: 7px; }
+    }
 
-    <text x="52%" y="55%" text-anchor="middle" dominant-baseline="middle" class="glass-text">
-      凭栏听曲
-    </text>
-  </svg>
+    /* 顶层骨架的微弱反光动画 */
+    @keyframes core-breath {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+  </style>
+
+  <text x="52%" y="55%" class="base-text glow-layer">凭栏听曲</text>
+  <text x="52%" y="55%" class="base-text sharp-layer">凭栏听曲</text>
+</svg>

@@ -50,6 +50,10 @@ conv 训练结果：
 这次效果其实不好因为我只做测试只取了前10000张并且只跑了1000轮，其实取出来的部分都没有跑完：
 ![alt text](image/identify_result1.png)
 
+结果2：
+现有的模型精度还是差了点，训练日志看old_tring可以看到MSE异常，模型过拟合严重。优化方案:optimizer中加入L2正则化，增加一层CNN网络（现为单层CNN）
+![alt text](image/result2.png)
+
 
 
 # debug存档：

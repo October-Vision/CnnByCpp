@@ -15,7 +15,6 @@ file(GLOB SOURCES "src/*.cpp" "src/*.cu")
 
 add_executable(my_cnn ${SOURCES})
 
-# 极其清爽的链接，不需要再手写 Qt 依赖
 target_link_libraries(my_cnn PRIVATE 
     CUDA::cublas 
     opencv_core

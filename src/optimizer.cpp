@@ -9,7 +9,10 @@ void SGD::update(Tensor& param, const Tensor& grad) {
     assert(param.size() == grad.size() && "Optimizer Error 2: 参数和梯度的尺寸不一致");
     
     // W = W - lr * dW
+    //L2正泽华 w=w-lr*(dw*weight)
+    float weight_decay_lambda=0.001f;
     for (int i = 0; i < param.size(); ++i) {
-        param.data[i] -= lr * grad.data[i];
+        //param.data[i] -= lr * grad.data[i];
+        param.data[i] -= lr*(grad.data[i]+weight_decay_lambda*param.data[i]);
     }
 }
