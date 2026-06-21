@@ -25,31 +25,29 @@
       dominant-baseline: middle;
     }
 
-    /* 底层：发光弥散层（负责快速顺滑的呼吸感） */
+  
     .glow-layer {
       fill: none;
       stroke: url(#liquid-light);
       filter: url(#pure-glow);
-      /* 动画提速到 2.5s，使用 ease-in-out 保证极其丝滑的呼吸 */
       animation: fast-breath 2.5s ease-in-out infinite;
     }
 
-    /* 顶层：极其锐利的玻璃边缘层（绝对不加模糊，保证清晰度！） */
     .sharp-layer {
-      fill: rgba(255, 255, 255, 0.06); /* 极其微弱的液态泛白填充 */
+      fill: rgba(255, 255, 255, 0.06); 
       stroke: url(#liquid-light);
       stroke-width: 1.2px;
-      /* 顶层只做轻微的透明度联动，维持骨架的冰冷锐利 */
+    
       animation: core-breath 2.5s ease-in-out infinite;
     }
 
-    /* 底层光晕的爆发动画 */
+   
     @keyframes fast-breath {
       0%, 100% { opacity: 0.2; stroke-width: 2px; }
       50% { opacity: 0.9; stroke-width: 7px; }
     }
 
-    /* 顶层骨架的微弱反光动画 */
+   
     @keyframes core-breath {
       0%, 100% { opacity: 0.7; }
       50% { opacity: 1; }
