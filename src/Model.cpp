@@ -29,6 +29,7 @@ SimpleConvNet::SimpleConvNet(const CNNConfig& config) {
 
     //实例化层
     conv1 = new Convolution(W1, b1, 1, 0);
+    bn1   = new BatchNorm(config.filter_num);
     relu1 = new Relu();
     pool1 = new Pooling(2, 2, 2, 0);
     conv2 = new Convolution(W_conv2, b_conv2, 1, 0);
@@ -42,9 +43,10 @@ SimpleConvNet::SimpleConvNet(const CNNConfig& config) {
 }
 
 //推理层：
-Tensor SimpleConvNet::predict(const Tensor& x) {
+Tensor SimpleConvNet::predict(const Tensor& x,bool is_training) {
     Tensor a1 = conv1->forward(x);
-    Tensor z1 = relu1->forward(a1);
+    Tensor b1_out=bn1->forward(a1,is_training);
+    Tensor z1 = relu1->forward(b1_out);
     Tensor p1 = pool1->forward(z1);
     //进入第二层
     Tensor a_c2 = conv2->forward(p1);
@@ -62,7 +64,7 @@ Tensor SimpleConvNet::predict(const Tensor& x) {
 
 //loss计算
 float SimpleConvNet::forward_loss(const Tensor& x, const Tensor& t) {
-    Tensor y=predict(x);
+    Tensor y=predict(x,true);
     return last_layer->forward(y, t);
 }
 
@@ -89,7 +91,8 @@ void SimpleConvNet::backward() {
     //第一层
     Tensor dz1 = pool1->backward(dp1);
     Tensor da1 = relu1->backward(dz1);
-    conv1->backward(da1);
+    Tensor dbn1 = bn1->backward(da1);
+    conv1->backward(dbn1);
 
 
     // // 动态重塑回 4D 传给池化层
@@ -105,6 +108,8 @@ void SimpleConvNet::backward() {
 void SimpleConvNet::update_weights(SGD& optimizer) {
     optimizer.update(conv1->W, conv1->dW);
     optimizer.update(conv1->b, conv1->db);
+    optimizer.update(bn1->get_W(),bn1->get_dW());
+    optimizer.update(bn1->get_b(),bn1->get_db());
     optimizer.update(conv2->W, conv2->dW);
     optimizer.update(conv2->b, conv2->db);
     optimizer.update(affine1->W, affine1->dW);
@@ -116,6 +121,10 @@ void SimpleConvNet::update_weights(SGD& optimizer) {
 void SimpleConvNet::save_weights(const std::string& prefix) {
     conv1->W.save(prefix+"W1.bin");
     conv1->b.save(prefix+"b1.bin");
+    bn1->get_W().save(prefix + "bn1_gamma.bin");
+    bn1->get_b().save(prefix + "bn1_beta.bin");
+    bn1->get_running_mean().save(prefix + "bn1_rmean.bin");
+    bn1->get_running_var().save(prefix + "bn1_rvar.bin");
     conv2->W.save(prefix + "W_conv2.bin"); 
     conv2->b.save(prefix + "b_conv2.bin");
     affine1->W.save(prefix+"W2.bin");
@@ -128,6 +137,10 @@ void SimpleConvNet::save_weights(const std::string& prefix) {
 void SimpleConvNet::load_weights(const std::string& prefix) {
     conv1->W.load(prefix + "W1.bin");
     conv1->b.load(prefix + "b1.bin");
+    bn1->get_W().load(prefix + "bn1_gamma.bin");
+    bn1->get_b().load(prefix + "bn1_beta.bin");
+    bn1->get_running_mean().load(prefix + "bn1_rmean.bin");
+    bn1->get_running_var().load(prefix + "bn1_rvar.bin");
     conv2->W.load(prefix + "W_conv2.bin"); 
     conv2->b.load(prefix + "b_conv2.bin");
     affine1->W.load(prefix + "W2.bin");
@@ -140,5 +153,5 @@ SimpleConvNet::~SimpleConvNet() {
     delete conv1; delete relu1; delete pool1;
     delete affine1; delete relu2; delete affine2;
     delete conv2; delete relu_conv2; delete pool2;
-    delete last_layer;
+    delete last_layer; delete bn1;
 }

@@ -31,7 +31,9 @@ void Trainer::fit(SimpleConvNet& model,
     mt19937 gen(rd());
     uniform_int_distribution<> dis(0, train_size-1);
 
-    CSVLogger logger("../logs/training_log.csv", "Iteration,Loss,Train_Accuracy,MSE,Precision,Recall,F1_Score");
+    uniform_int_distribution<> dis_test(0, 9999);//测试集
+
+    CSVLogger logger("../logs/training_log.csv", "Iteration,Train_Loss,Train_Acc,Val_Loss,Val_Acc");
     for (int i=0; i<cfg.iters_num; ++i) {
         Tensor x_batch({cfg.batch_size, 1, 28, 28}); 
         Tensor t_batch({cfg.batch_size, cfg.output_size}); 
@@ -47,23 +49,31 @@ void Trainer::fit(SimpleConvNet& model,
         model.update_weights(optimizer);
 
         if (i%100 == 0) {
-            Tensor batch_pred = model.predict(x_batch);
-            float batch_acc     = Metrics::accuracy(batch_pred, t_batch);
-            float batch_mse     = Metrics::mse(batch_pred, t_batch);
-            float batch_f1score = Metrics::f1_score(batch_pred,t_batch);
-            float batch_pre     = Metrics::precision(batch_pred,t_batch);
-            float batch_recall  = Metrics::recall(batch_pred,t_batch);
-        
-            cout << "      [Iter " << setw(4) << i << "] "
-                 << "Loss: "  << fixed << setprecision(4) << loss << " | "
-                 << "Acc: "   << setprecision(2) << batch_acc * 100.0f << "% | "
-                 << "MSE: "   << setprecision(4) << batch_mse << " | "
-                 << "Pre: "   << setprecision(2) << batch_pre * 100.0f << "% | "
-                 << "Rec: "   << setprecision(2) << batch_recall * 100.0f << "% | "
-                 << "F1: "    << setprecision(4) << batch_f1score 
+            Tensor train_pred = model.predict(x_batch);
+            float train_acc   = Metrics::accuracy(train_pred, t_batch);
+            float train_loss  = loss;
+            
+            Tensor x_val_batch({cfg.batch_size, 1, 28, 28});
+            Tensor t_val_batch({cfg.batch_size, cfg.output_size});
+
+            for (int k = 0; k < cfg.batch_size; ++k) {
+                int r_idx = dis_test(gen);
+                copy(x_test.data.begin() + r_idx * 784, x_test.data.begin() + (r_idx + 1) * 784, x_val_batch.data.begin() + k * 784);
+                copy(t_test.data.begin() + r_idx * cfg.output_size, t_test.data.begin() + (r_idx + 1) * cfg.output_size, t_val_batch.data.begin() + k * cfg.output_size);
+            }
+
+            Tensor val_pred = model.predict(x_val_batch);
+            float val_acc   = Metrics::accuracy(val_pred, t_val_batch);
+            float val_loss  = model.forward_loss(x_val_batch, t_val_batch);
+
+            cout << "  [Iter " << setw(4) << i << "] "
+                 << "Train Loss: " << fixed << setprecision(4) << train_loss << " | "
+                 << "Train Acc: "  << setprecision(2) << train_acc * 100.0f << "% || "
+                 << "Val Loss: "   << setprecision(4) << val_loss << " | "
+                 << "Val Acc: "    << setprecision(2) << val_acc * 100.0f << "%" 
                  << endl;
         
-            logger.log_row(i, {loss, batch_acc, batch_mse, batch_pre, batch_recall, batch_f1score});
+            logger.log_row(i, {train_loss, train_acc, val_loss, val_acc});
             }
     }
 

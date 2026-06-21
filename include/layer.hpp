@@ -3,6 +3,7 @@
 #include "Cnn_utils.hpp"
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 //ReLU 激活层
 class Relu {
@@ -86,4 +87,46 @@ class Pooling{
     Tensor forward(const Tensor& input);
     Tensor backward(const Tensor& dout);
     
+};
+
+//BN层
+class BatchNorm{
+    private:
+    int channels;
+    float eps;
+    float momentum;
+
+    //更新参数
+    Tensor gamma;
+    Tensor beta;
+    Tensor dgamma;
+    Tensor dbeta;
+
+    //全局均值和方差
+    Tensor running_mean;
+    Tensor running_var;
+
+    //中间变量
+    Tensor x_hat;
+    Tensor var;
+    Tensor mean;
+    Tensor x_minus_mean;
+
+    public:
+    BatchNorm(int channels, float eps = 1e-5, float momentum = 0.9);
+
+
+    //前向传播
+    Tensor forward(const Tensor& x, bool is_training = true);
+
+    //反向传播
+    Tensor backward(const Tensor& dout);
+    //提供接口给Model访问参数用于优化器更新
+    Tensor& get_W() { return gamma; }  //gamma映射为W,不动SGD 
+    Tensor& get_b() { return beta; }   //beta映射为b
+    Tensor& get_dW() { return dgamma; }
+    Tensor& get_db() { return dbeta; }
+
+    Tensor& get_running_mean() { return running_mean; }
+    Tensor& get_running_var() { return running_var; }
 };

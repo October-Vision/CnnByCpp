@@ -238,3 +238,136 @@ Tensor Pooling::backward(const Tensor& dout){
     Tensor dx=col2im(dcol,x.shape,pool_h,pool_w,stride,pad);
     return dx;
 }
+
+//BN层实现
+BatchNorm::BatchNorm(int channels,float eps,float momentum)
+    : channels(channels),eps(eps),momentum(momentum) {
+    gamma = Tensor({channels}, 1.0f);
+    beta = Tensor({channels}, 0.0f);
+    dgamma = Tensor({channels}, 0.0f);
+    dbeta = Tensor({channels}, 0.0f);
+
+    running_mean = Tensor({channels}, 0.0f);
+    running_var = Tensor({channels}, 1.0f);
+}
+
+Tensor BatchNorm::forward(const Tensor& x, bool is_training) {
+    int N = x.shape[0];
+    int C = x.shape[1];
+    int H = x.shape[2];
+    int W = x.shape[3];
+    assert(C == channels && "BNError:通道数不匹配");
+
+    Tensor out = Tensor(x.shape, 0.0f);
+    int m = N * H * W; //元素总数
+
+    if (is_training) {
+        mean = Tensor({C}, 0.0f);
+        var = Tensor({C}, 0.0f);
+        x_minus_mean = Tensor(x.shape, 0.0f);
+        x_hat = Tensor(x.shape, 0.0f);
+
+        //每个通道的均值
+        for (int n = 0; N > n; ++n) {
+            for (int c = 0; c < C; ++c) {
+                for (int h = 0; h < H; ++h) {
+                    for (int w = 0; w < W; ++w) {
+                        int idx = ((n * C + c) * H + h) * W + w;
+                        mean.data[c] += x.data[idx];
+                    }
+                }
+            }
+        }
+        for (int c = 0; c < C; ++c) mean.data[c] /= m;
+
+        //方差
+        for (int n = 0; n < N; ++n) {
+            for (int c = 0; c < C; ++c) {
+                for (int h = 0; h < H; ++h) {
+                    for (int w = 0; w < W; ++w) {
+                        int idx = ((n * C + c) * H + h) * W + w;
+                        float diff = x.data[idx] - mean.data[c];
+                        x_minus_mean.data[idx] = diff;
+                        var.data[c] += diff * diff;
+                    }
+                }
+            }
+        }
+        for (int c = 0; c < C; ++c) var.data[c] /= m;
+        //更新全局滚动均值和方差
+        for (int c = 0; c < C; ++c) {
+            running_mean.data[c] = momentum * running_mean.data[c] + (1.0f - momentum) * mean.data[c];
+            running_var.data[c] = momentum * running_var.data[c] + (1.0f - momentum) * var.data[c];
+        }
+    } else {
+        mean = running_mean;
+        var = running_var;
+    }
+
+    for (int n = 0; n < N; ++n) {
+            for (int c = 0; c < C; ++c) {
+                float inv_std = 1.0f / std::sqrt(var.data[c] + eps);
+                for (int h = 0; h < H; ++h) {
+                    for (int w = 0; w < W; ++w) {
+                        int idx = ((n * C + c) * H + h) * W + w;
+                        float normalized_val;
+                        if (is_training) {
+                            x_hat.data[idx] = x_minus_mean.data[idx] * inv_std;
+                            normalized_val = x_hat.data[idx];
+                        } else {
+                            normalized_val = (x.data[idx] - mean.data[c]) * inv_std;
+                        }
+                        // 乘上 gamma，加上 beta
+                        out.data[idx] = gamma.data[c] * normalized_val + beta.data[c];
+                    }
+                }
+            }
+        }
+    return out;
+}
+
+Tensor BatchNorm::backward(const Tensor& dout) {
+    int N = dout.shape[0];
+    int C = dout.shape[1];
+    int H = dout.shape[2];
+    int W = dout.shape[3];
+    int m = N * H * W;
+
+    Tensor dx = Tensor(dout.shape, 0.0f);
+    
+    // 重置梯度
+    fill(dgamma.data.begin(), dgamma.data.end(), 0.0f);
+    fill(dbeta.data.begin(), dbeta.data.end(), 0.0f);
+
+    //计算dgamma dbeta
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            for (int h = 0; h < H; ++h) {
+                for (int w = 0; w < W; ++w) {
+                    int idx = ((n * C + c) * H + h) * W + w;
+                    dgamma.data[c] += dout.data[idx] * x_hat.data[idx];
+                    dbeta.data[c] += dout.data[idx];
+                }
+            }
+        }
+    }
+
+    //链式求导
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            float inv_std = 1.0f / std::sqrt(var.data[c] + eps);
+            for (int h = 0; h < H; ++h) {
+                for (int w = 0; w < W; ++w) {
+                    int idx = ((n * C + c) * H + h) * W + w;
+                    
+                    float dx_hat = dout.data[idx] * gamma.data[c];
+                    float dvar = dx_hat * x_minus_mean.data[idx] * -0.5f * inv_std * inv_std * inv_std;
+                    
+                    //由于跨Batch累加非常复杂,采用数学闭式解推导
+                    dx.data[idx] = inv_std * (dx_hat - dgamma.data[c] * x_hat.data[idx] / m - dbeta.data[c] / m);
+                }
+            }
+        }
+    }
+    return dx;
+}

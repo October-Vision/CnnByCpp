@@ -35,6 +35,7 @@ public:
     Relu* relu2;
     Affine* affine2;
     SoftmaxWithLoss* last_layer;
+    BatchNorm* bn1;
 
     // 缓存一些核心维度数据，反向传播要用
     int filter_num;
@@ -45,7 +46,7 @@ public:
     ~SimpleConvNet();
 
     // 核心功能接口
-    Tensor predict(const Tensor& x);// 正向推理 
+    Tensor predict(const Tensor& x, bool is_training = false);// 正向推理 
     float forward_loss(const Tensor& x, const Tensor& t);// 正向算Loss
     void backward();// 反向传播算梯度
     void update_weights(SGD& optimizer);// 更新权重

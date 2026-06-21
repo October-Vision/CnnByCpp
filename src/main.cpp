@@ -19,40 +19,40 @@ void print_ascii_image(const Tensor& img) {
 
 int main() {
     //gui部分手写画板
-    CNNConfig config;
-    config.filter_num = 30;
-    config.hidden_size = 100;
-    Predictor predictor(config, "../model/");
+    // CNNConfig config;
+    // config.filter_num = 30;
+    // config.hidden_size = 100;
+    // Predictor predictor(config, "../model/");
 
-    DrawPad pad("CNN Draw Pad", 280, 12, &predictor);
-    pad.run();
+    // DrawPad pad("CNN Draw Pad", 280, 12, &predictor);
+    // pad.run();
     
-    return 0;
+    // return 0;
 
 
 
 
 
     // // /* ##############训练部分*/
-    // //参数配置
-    // CNNConfig config;
-    // config.iters_num = 10000; 
-    // config.batch_size = 100;
-    // config.learning_rate = 0.05f;
-    // //config.hidden_size = 200;
+    //参数配置
+    CNNConfig config;
+    config.iters_num = 10000; 
+    config.batch_size = 100;
+    config.learning_rate = 0.05f;
+    //config.hidden_size = 200;
 
-    // //数据集
-    // std::string train_images = "/home/wang/C_cnn/data/train-images-idx3-ubyte";
-    // std::string train_labels = "/home/wang/C_cnn/data/train-labels-idx1-ubyte";
-    // std::string test_images  = "/home/wang/C_cnn/data/t10k-images-idx3-ubyte";
-    // std::string test_labels  = "/home/wang/C_cnn/data/t10k-labels-idx1-ubyte";
+    //数据集
+    std::string train_images = "/home/wang/C_cnn/data/train-images-idx3-ubyte";
+    std::string train_labels = "/home/wang/C_cnn/data/train-labels-idx1-ubyte";
+    std::string test_images  = "/home/wang/C_cnn/data/t10k-images-idx3-ubyte";
+    std::string test_labels  = "/home/wang/C_cnn/data/t10k-labels-idx1-ubyte";
 
-    // //构建模型对象与调度器对象
-    // SimpleConvNet model(config);
-    // Trainer trainer(config);
+    //构建模型对象与调度器对象
+    SimpleConvNet model(config);
+    Trainer trainer(config);
 
-    // //训练，并自动保存
-    // trainer.fit(model, train_images, train_labels, test_images, test_labels);
+    //训练，并自动保存
+    trainer.fit(model, train_images, train_labels, test_images, test_labels);
    
    
    
